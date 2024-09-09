@@ -14,9 +14,9 @@ app = Flask(__name__)
 def scrape_fnacpro():
     # Configure ChromeDriver options and service
     chrome_options = Options()
-    chrome_options.add_argument('--headless')  # Run headless if necessary (no UI)
-    chrome_options.add_argument('--no-sandbox')
-    chrome_options.add_argument('--disable-dev-shm-usage')
+    # chrome_options.add_argument('--headless')  # Run headless if necessary (no UI)
+    # chrome_options.add_argument('--no-sandbox')
+    # chrome_options.add_argument('--disable-dev-shm-usage')
 
     service = Service(ChromeDriverManager().install())
 
