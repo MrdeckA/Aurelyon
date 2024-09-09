@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from flask import Flask, jsonify
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
@@ -7,39 +7,39 @@ from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
-import json
 
-app = FastAPI()
+app = Flask(__name__)
 
-def scrape_page(url: str):
-    # Configurer les options et le service de ChromeDriver
+# Function to perform web scraping
+def scrape_fnacpro():
+    # Configure ChromeDriver options and service
     chrome_options = Options()
-    # chrome_options.add_argument("--headless")  # Pour ne pas ouvrir de fenêtre
+    chrome_options.add_argument('--headless')  # Run headless if necessary (no UI)
+    chrome_options.add_argument('--no-sandbox')
+    chrome_options.add_argument('--disable-dev-shm-usage')
+
     service = Service(ChromeDriverManager().install())
-    
-    # Créer un dictionnaire vide pour stocker les résultats
-    data = {}
 
     try:
-        # Démarrer ChromeDriver
         driver = webdriver.Chrome(service=service, options=chrome_options)
         
-        # Accéder à la page
-        driver.get(url)
+        # Access the page
+        driver.get("https://www.fnacpro.com/TV-OLED-Evo-LG-OLED55G4-139-cm-4K-UHD-Smart-TV-2024-Noir-et-Argent/a20267281/w-4")
         
-        # Utiliser WebDriverWait pour attendre que l'élément du titre soit visible
-        wait = WebDriverWait(driver, 10)  # Attendre jusqu'à 10 secondes
-        
-        # Extraire les informations
+        # Use WebDriverWait to wait for the title element to be visible
+        wait = WebDriverWait(driver, 10)  # Wait up to 10 seconds
+
+        # Extract the information
         try:
             title = wait.until(EC.visibility_of_element_located((By.TAG_NAME, "h1"))).text
         except (NoSuchElementException, TimeoutException):
             title = "Title not found"
         
         try:
+            # Wait for the description to be present
             descriptions = wait.until(EC.presence_of_all_elements_located((By.CLASS_NAME, "f-productDesc__raw")))
             if len(descriptions) > 0:
-                description = descriptions[1].text if len(descriptions) > 1 else descriptions[0].text
+                description = descriptions[-1].text
             else:
                 description = "Description not found"
         except (NoSuchElementException, TimeoutException):
@@ -73,7 +73,7 @@ def scrape_page(url: str):
         except (NoSuchElementException, TimeoutException):
             status = "Status not found"
 
-        # Préparer les données
+        # Prepare the data
         data = {
             'title': title,
             'description': description,
@@ -84,15 +84,21 @@ def scrape_page(url: str):
         }
 
     except TimeoutException:
-        raise HTTPException(status_code=408, detail="Timeout occurred while trying to load the page.")
+        return {"error": "Timeout occurred while trying to load the page."}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+        return {"error": f"An error occurred: {e}"}
     finally:
-        # Quitter le driver
+        # Quit the driver
         driver.quit()
 
     return data
 
-@app.get("/scrape")
-def scrape(url: str):
-    return scrape_page(url)
+# Route to trigger the scraping
+@app.route('/scrape', methods=['GET'])
+def scrape():
+    # Call the scrape function and return its result as JSON
+    data = scrape_fnacpro()
+    return jsonify(data)
+
+if __name__ == '__main__':
+    app.run(debug=True)
