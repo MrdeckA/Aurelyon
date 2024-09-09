@@ -100,5 +100,11 @@ def scrape():
     data = scrape_fnacpro()
     return jsonify(data)
 
+
+
+@app.route('/')
+def hello_world():
+    return 'Hello, World!'
+
 if __name__ == '__main__':
     app.run(debug=True)
